@@ -1,0 +1,63 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package = ".;proto";
+
+// 定义底层接口，既可以为后台管理系统提供，也可以web系统提供服务
+service User {
+  // 用户列表
+  rpc GetUserList(PageInfo) returns (UserListResponse);
+  // 根据 mobile 查询用户信息
+  rpc GetUserByMobile(MobileRequest) returns (UserInfoResponse);
+  // 根据 id 查询用户信息
+  rpc GetUserById(IdRequest) returns (UserInfoResponse);
+  // 添加用户
+  rpc CreateUser(CreateUserInfo) returns (UserInfoResponse);
+  // 更新用户
+  rpc UpdateUser(UpdateUserInfo) returns (google.protobuf.Empty);
+}
+
+// 分页信息
+message PageInfo {
+  uint32 page = 1;
+  uint32 pageSize = 2;
+}
+
+message MobileRequest {
+  string mobile = 1;
+}
+
+message IdRequest {
+  int32 id = 1;
+}
+
+message CreateUserInfo {
+  string mobile = 1;
+  string password = 2;
+  string nickname = 3;
+}
+
+message UpdateUserInfo {
+  uint32 id = 1;
+  string nickname = 2;
+  uint32 gender = 3;
+  //protobuf 并没有提供datetime类型,因为在不同语言中不一样，但是datetime的本质是uint64
+  uint64 birthday = 4;
+}
+
+// 用户列表返回
+message UserListResponse {
+  //总数
+  uint32 total = 1;
+  repeated UserInfoResponse data = 2;
+}
+
+// 用户基本信息返回
+message UserInfoResponse {
+  uint32 id = 1;
+  string mobile = 2;
+  string password = 3;
+  string nickname = 4;
+  uint32 gender = 5;
+  uint64 birthday = 6;
+  uint32 role = 7;
+}
