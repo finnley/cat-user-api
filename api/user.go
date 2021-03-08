@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cat-user-api/global"
 	"cat-user-api/global/response"
 	"cat-user-api/proto"
 	"context"
@@ -47,8 +48,10 @@ func HandleGrpcErrorToHttp(err error, c *gin.Context) {
 
 func GetUserList(ctx *gin.Context) {
 	zap.S().Debug("获取用户列表")
-	host := "127.0.0.1"
-	port := 50051
+	//host := "127.0.0.1"
+	//port := 50051
+	host := global.ServerConfig.UserSrvInfo.Host
+	port := global.ServerConfig.UserSrvInfo.Port
 	// 1. 拨号连接用户 grpc 服务器
 	userCon, err := grpc.Dial(fmt.Sprintf("%s:%d", host, port), grpc.WithInsecure())
 	if err != nil {
@@ -81,7 +84,7 @@ func GetUserList(ctx *gin.Context) {
 		//result = append(result, data)
 		//改写
 		user := response.UserResponse{
-			Id:  value.Id,
+			Id:       value.Id,
 			Nickname: value.Nickname,
 			//Birthday: time.Time(time.Unix(int64(value.Birthday), 0)),
 			//方法一：

@@ -1,19 +1,25 @@
 package main
 
 import (
+	"cat-user-api/global"
 	"cat-user-api/initialize"
 	"fmt"
 	"go.uber.org/zap"
 )
 
 func main() {
-	port := 8021
+	//port := 8021
 
 	// 初始化 logger
 	initialize.InitLogger()
 
+	// 初始化配置文件
+	initialize.InitConfig()
+
 	// 初始化 routers
 	Router := initialize.Routers()
+
+	port := global.ServerConfig.Port
 
 	/**
 	1. S() 可以获取一个全局的 sugar,可以让我们自己设置一个全局的 logger
