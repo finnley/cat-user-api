@@ -4,7 +4,12 @@ import (
 	"cat-user-api/global"
 	"cat-user-api/initialize"
 	"fmt"
+	"github.com/gin-gonic/gin/binding"
+	ut "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
+
+	myvalidator "cat-user-api/validator"
 )
 
 func main() {
@@ -18,6 +23,23 @@ func main() {
 
 	// 初始化 routers
 	Router := initialize.Routers()
+
+	// 初始化翻译
+	if err := initialize.InitTrans("zh"); err != nil {
+		panic(err)
+	}
+
+	//注册验证器
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		_ = v.RegisterValidation("mobile", myvalidator.ValidateMobile)
+		// 翻译
+		_ = v.RegisterTranslation("mobile", global.Trans, func(ut ut.Translator) error {
+			return ut.Add("mobile", "{0}为非法的手机号码!", true)
+		}, func(ut ut.Translator, fe validator.FieldError) string {
+			t, _ := ut.T("mobile", fe.Field())
+			return t
+		})
+	}
 
 	port := global.ServerConfig.Port
 

@@ -1,19 +1,32 @@
 package api
 
 import (
-	"cat-user-api/global"
-	"cat-user-api/global/response"
-	"cat-user-api/proto"
+	"cat-user-api/forms"
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
+
+	"cat-user-api/global"
+	"cat-user-api/global/response"
+	"cat-user-api/proto"
 )
+
+func removeTopStruct(fields map[string]string) map[string]string {
+	rsp := map[string]string{}
+	for field, err :=  range fields {
+		rsp[field[strings.Index(field, ".")+1:]] = err
+	}
+	return rsp
+}
 
 //将grpc的code转换成http的状态码
 func HandleGrpcErrorToHttp(err error, c *gin.Context) {
@@ -46,6 +59,19 @@ func HandleGrpcErrorToHttp(err error, c *gin.Context) {
 	}
 }
 
+func HandleValidatorError(c *gin.Context, err error)  {
+	errs, ok := err.(validator.ValidationErrors)
+	if !ok {
+		c.JSON(http.StatusOK, gin.H{
+			"msg": err.Error(),
+		})
+	}
+	c.JSON(http.StatusBadRequest, gin.H{
+		//"error": errs.Translate(trans),
+		"error": removeTopStruct(errs.Translate(global.Trans)),
+	})
+}
+
 func GetUserList(ctx *gin.Context) {
 	zap.S().Debug("获取用户列表")
 	//host := "127.0.0.1"
@@ -61,9 +87,15 @@ func GetUserList(ctx *gin.Context) {
 	}
 	// 2. 生成grpc的client并调用接口
 	userSrvClient := proto.NewUserClient(userCon)
+
+	page := ctx.DefaultQuery("page", "0")
+	pageInt, _ := strconv.Atoi(page)
+	pageSize := ctx.DefaultQuery("page_size", "10")
+	pageSizeInt, _ := strconv.Atoi(pageSize)
+
 	rsp, err := userSrvClient.GetUserList(context.Background(), &proto.PageInfo{
-		Page:     0,
-		PageSize: 0,
+		Page:     uint32(pageInt),
+		PageSize: uint32(pageSizeInt),
 	})
 	if err != nil {
 		zap.S().Errorw("[GetUserList]查询【用户列表】失败")
@@ -97,4 +129,28 @@ func GetUserList(ctx *gin.Context) {
 		result = append(result, user)
 	}
 	ctx.JSON(http.StatusOK, result)
+}
+
+func PasswordLogin(c *gin.Context) {
+	// 表单验证
+	// 首先获取实例
+	passwordLoginForm := forms.PasswordLoginForm{}
+	// 接着进行绑定
+	if err := c.ShouldBind(&passwordLoginForm); err != nil {
+		//需要返回错误信息，比如翻译，数据格式化
+		//errs, ok := err.(validator.ValidationErrors)
+		//if !ok {
+		//	c.JSON(http.StatusOK, gin.H{
+		//		"msg": err.Error(),
+		//	})
+		//}
+		//c.JSON(http.StatusBadRequest, gin.H{
+		//	//"error": errs.Translate(trans),
+		//	"error": removeTopStruct(errs.Translate(global.Trans)),
+		//})
+		//return
+		//优化
+		HandleValidatorError(c, err)
+		return
+	}
 }
