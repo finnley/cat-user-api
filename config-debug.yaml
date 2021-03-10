@@ -8,6 +8,6 @@ jwt:
   key: 'ud#a!TPZjfe2ugENILvbF8XVQiCAWybN'
 
 sms:
-  key: 'LTAI4GEry7zodh28CpQcz5Pc'
-  secret: 'UZASoLvhtY2Ei8j2rMPCJif4noSl5u'
+  key: ''
+  secret: ''
   expire: 300
