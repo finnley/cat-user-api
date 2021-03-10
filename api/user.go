@@ -2,8 +2,11 @@ package api
 
 import (
 	"cat-user-api/forms"
+	"cat-user-api/middlewares"
+	"cat-user-api/models"
 	"context"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -22,7 +25,7 @@ import (
 
 func removeTopStruct(fields map[string]string) map[string]string {
 	rsp := map[string]string{}
-	for field, err :=  range fields {
+	for field, err := range fields {
 		rsp[field[strings.Index(field, ".")+1:]] = err
 	}
 	return rsp
@@ -59,7 +62,7 @@ func HandleGrpcErrorToHttp(err error, c *gin.Context) {
 	}
 }
 
-func HandleValidatorError(c *gin.Context, err error)  {
+func HandleValidatorError(c *gin.Context, err error) {
 	errs, ok := err.(validator.ValidationErrors)
 	if !ok {
 		c.JSON(http.StatusOK, gin.H{
@@ -85,6 +88,11 @@ func GetUserList(ctx *gin.Context) {
 			"msg", err.Error(),
 		)
 	}
+
+	claims, _ := ctx.Get("claims")
+	currentUser := claims.(*models.CustomClaims) //类型转换
+	zap.S().Infof("访问用户: %d", currentUser.ID)
+
 	// 2. 生成grpc的client并调用接口
 	userSrvClient := proto.NewUserClient(userCon)
 
@@ -164,7 +172,7 @@ func PasswordLogin(c *gin.Context) {
 
 	//生成 grpc client 并调用接口
 	userSrvClient := proto.NewUserClient(userConn)
-	if rsp, err := userSrvClient.GetUserByMobile(context.Background(), &proto.MobileRequest {
+	if rsp, err := userSrvClient.GetUserByMobile(context.Background(), &proto.MobileRequest{
 		Mobile: passwordLoginForm.Mobile,
 	}); err != nil {
 		if e, ok := status.FromError(err); ok {
@@ -183,7 +191,7 @@ func PasswordLogin(c *gin.Context) {
 	} else {
 		//只是查询到了用户而已，并没有检查到密码
 		if passRsp, passErr := userSrvClient.CheckPassword(context.Background(), &proto.PasswordCheckInfo{
-			Password: passwordLoginForm.Password,
+			Password:          passwordLoginForm.Password,
 			EncryptedPassword: rsp.Password,
 		}); passErr != nil {
 			c.JSON(http.StatusInternalServerError, map[string]string{
@@ -194,13 +202,14 @@ func PasswordLogin(c *gin.Context) {
 				//生成token
 				j := middlewares.NewJWT()
 				claims := models.CustomClaims{
-					ID: uint(rsp.Id),
-					NickName: rsp.Nickname,
+					ID:          uint(rsp.Id),
+					NickName:    rsp.Nickname,
 					AuthorityId: uint(rsp.Role),
+					// 上面是业务信息，下面是自定义信息
 					StandardClaims: jwt.StandardClaims{
-						NotBefore: time.Now().Unix(), //签名生效时间
-						ExpiresAt: time.Now().Unix() + 60 * 60, //签名有效期一个小时
-						Issuer: "finnley", //什么机构生成的前面
+						NotBefore: time.Now().Unix(),         //签名生效时间
+						ExpiresAt: time.Now().Unix() + 60*60, //签名有效期一个小时
+						Issuer:    "cat",                     //什么机构进行的验证签名
 					},
 				}
 				token, err := j.CreateToken(claims)
@@ -212,10 +221,10 @@ func PasswordLogin(c *gin.Context) {
 				}
 
 				c.JSON(http.StatusOK, gin.H{
-					"id": rsp.Id,
-					"nickname": rsp.Nickname,
-					"token": token,
-					"expired_at": (time.Now().Unix() + 60 * 60) * 1000,
+					"id":         rsp.Id,
+					"nickname":   rsp.Nickname,
+					"token":      token,
+					"expired_at": (time.Now().Unix() + 60 * 60) * 1000, // 毫秒级别
 				})
 
 				//c.JSON(http.StatusOK, map[string]string{
