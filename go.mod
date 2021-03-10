@@ -12,6 +12,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/mojocn/base64Captcha v1.3.1
 	github.com/spf13/viper v1.7.1
 	github.com/ugorji/go v1.2.4 // indirect
 	go.uber.org/multierr v1.6.0 // indirect

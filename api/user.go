@@ -162,6 +162,15 @@ func PasswordLogin(c *gin.Context) {
 		return
 	}
 
+	// 验证码验证
+	// true表示每次验证之后关闭
+	if !store.Verify(passwordLoginForm.CaptchaId, passwordLoginForm.Captcha, true) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"captcha": "验证码错误",
+		})
+		return
+	}
+
 	//拨号连接用户grpc服务
 	userConn, err := grpc.Dial(fmt.Sprintf("%s:%d", global.ServerConfig.UserSrvInfo.Host, global.ServerConfig.UserSrvInfo.Port), grpc.WithInsecure())
 	if err != nil {
@@ -224,7 +233,7 @@ func PasswordLogin(c *gin.Context) {
 					"id":         rsp.Id,
 					"nickname":   rsp.Nickname,
 					"token":      token,
-					"expired_at": (time.Now().Unix() + 60 * 60) * 1000, // 毫秒级别
+					"expired_at": (time.Now().Unix() + 60*60) * 1000, // 毫秒级别
 				})
 
 				//c.JSON(http.StatusOK, map[string]string{

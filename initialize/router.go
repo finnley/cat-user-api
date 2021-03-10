@@ -11,6 +11,7 @@ func Routers() *gin.Engine {
 	//配置跨域
 	Router.Use(middlewares.Cors())
 	ApiGroup := Router.Group("/u/v1")
+	routers.InitBaseRouter(ApiGroup)
 	routers.InitUserRouter(ApiGroup)
 
 	return Router
