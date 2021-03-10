@@ -153,4 +153,79 @@ func PasswordLogin(c *gin.Context) {
 		HandleValidatorError(c, err)
 		return
 	}
+
+	//拨号连接用户grpc服务
+	userConn, err := grpc.Dial(fmt.Sprintf("%s:%d", global.ServerConfig.UserSrvInfo.Host, global.ServerConfig.UserSrvInfo.Port), grpc.WithInsecure())
+	if err != nil {
+		zap.S().Errorw("[GetUserList] 连接 【用户服务失败】",
+			"msg", err.Error(),
+		)
+	}
+
+	//生成 grpc client 并调用接口
+	userSrvClient := proto.NewUserClient(userConn)
+	if rsp, err := userSrvClient.GetUserByMobile(context.Background(), &proto.MobileRequest {
+		Mobile: passwordLoginForm.Mobile,
+	}); err != nil {
+		if e, ok := status.FromError(err); ok {
+			switch e.Code() {
+			case codes.NotFound:
+				c.JSON(http.StatusBadRequest, map[string]string{
+					"mobile": "用户不存在",
+				})
+			default:
+				c.JSON(http.StatusInternalServerError, map[string]string{
+					"mobile": "登录失败1",
+				})
+			}
+			return
+		}
+	} else {
+		//只是查询到了用户而已，并没有检查到密码
+		if passRsp, passErr := userSrvClient.CheckPassword(context.Background(), &proto.PasswordCheckInfo{
+			Password: passwordLoginForm.Password,
+			EncryptedPassword: rsp.Password,
+		}); passErr != nil {
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"password": "登录失败2",
+			})
+		} else {
+			if passRsp.Success {
+				//生成token
+				j := middlewares.NewJWT()
+				claims := models.CustomClaims{
+					ID: uint(rsp.Id),
+					NickName: rsp.Nickname,
+					AuthorityId: uint(rsp.Role),
+					StandardClaims: jwt.StandardClaims{
+						NotBefore: time.Now().Unix(), //签名生效时间
+						ExpiresAt: time.Now().Unix() + 60 * 60, //签名有效期一个小时
+						Issuer: "finnley", //什么机构生成的前面
+					},
+				}
+				token, err := j.CreateToken(claims)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"msg": "生成token失败",
+					})
+					return
+				}
+
+				c.JSON(http.StatusOK, gin.H{
+					"id": rsp.Id,
+					"nickname": rsp.Nickname,
+					"token": token,
+					"expired_at": (time.Now().Unix() + 60 * 60) * 1000,
+				})
+
+				//c.JSON(http.StatusOK, map[string]string{
+				//	"msg": "登录成功",
+				//})
+			} else {
+				c.JSON(http.StatusBadRequest, map[string]string{
+					"password": "登录失败3",
+				})
+			}
+		}
+	}
 }
