@@ -11,3 +11,7 @@ sms:
   key: 'LTAI4GEry7zodh28CpQcz5Pc'
   secret: 'UZASoLvhtY2Ei8j2rMPCJif4noSl5u'
   expire: 300
+
+redis:
+  host: '192.168.20.20'
+  port: 6379

@@ -15,10 +15,16 @@ type AliSmsConfig struct {
 	Expire    int    `mapstructure:"expire"`
 }
 
+type RedisConfig struct {
+	Host string `mapstrucrure:"host"`
+	Port string `mapstrucrure:"port"`
+}
+
 type ServerConfig struct {
 	Name        string        `mapstructure:"name"`
 	Port        int           `mapstructure:"port"`
 	UserSrvInfo UserSrvConfig `mapstructure:"user_srv"`
 	JWTInfo     JWTConfig     `mapstructure:"jwt"`
 	AliSmsInfo  AliSmsConfig  `mapstructure:"sms"`
+	RedisInfo   RedisConfig   `mapstructure:"redis"`
 }

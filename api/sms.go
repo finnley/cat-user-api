@@ -1,16 +1,20 @@
 package api
 
 import (
-	"cat-user-api/forms"
-	"cat-user-api/global"
+	"context"
 	"fmt"
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/dysmsapi"
-	"github.com/gin-gonic/gin"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/dysmsapi"
+	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
+
+	"cat-user-api/forms"
+	"cat-user-api/global"
 )
 
 // 生成 width 长度的短信验证码
@@ -49,7 +53,7 @@ func SendSms(ctx *gin.Context) {
 	request.QueryParams["PhoneNumbers"] = sendSmsForm.Mobile            //手机号
 	request.QueryParams["SignName"] = "打码人生"                            //阿里云验证过的项目名 自己设置
 	request.QueryParams["TemplateCode"] = "SMS_200178073"               //阿里云的短信模板号 自己设置
-	request.QueryParams["TemplateParam"] = "{\"code\":" + smsCode + "}" //短信模板中的验证码内容 自己生成   之前试过直接返回，但是失败，加上code成功。
+	request.QueryParams["TemplateParam"] = "{\"code\":" + smsCode + "}" //短信模板中的验证码内容 自己生成之前试过直接返回，但是失败，加上code成功。
 	response, err := client.ProcessCommonRequest(request)
 	fmt.Print(client.DoAction(request, response))
 	//  fmt.Print(response)
@@ -57,13 +61,16 @@ func SendSms(ctx *gin.Context) {
 		fmt.Print(err.Error())
 	}
 	fmt.Printf("response is %#v\n", response)
+	fmt.Printf("code is %#v\n", smsCode)
+	fmt.Printf("%s:%d", global.ServerConfig.RedisInfo.Host, global.ServerConfig.RedisInfo.Port)
+	fmt.Printf("%s", sendSmsForm.Mobile)
 
 	// 后面注册的时候户将短信验证码带回来注册
 	// 保存验证码到 redis
-	//rdb := redis.NewClient(&redis.Options{
-	//	Addr: fmt.Sprintf("%s:%d", global.ServerConfig.RedisInfo.Host, global.ServerConfig.RedisInfo.Port),
-	//})
-	//rdb.Set(context.Background(), sendSmsForm.Mobile, smsCode, time.Duration(global.ServerConfig.AliSmsInfo.Expire)*time.Second)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: fmt.Sprintf("%s:%d", global.ServerConfig.RedisInfo.Host, global.ServerConfig.RedisInfo.Port),
+	})
+	rdb.Set(context.Background(), sendSmsForm.Mobile, smsCode, time.Duration(global.ServerConfig.AliSmsInfo.Expire)*time.Second)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"msg": "发送成功",
