@@ -2,3 +2,5 @@
 
 .DS_Store
 
+config-debug.yaml
+config-prod.yaml
