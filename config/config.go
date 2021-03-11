@@ -17,7 +17,7 @@ type AliSmsConfig struct {
 
 type RedisConfig struct {
 	Host string `mapstrucrure:"host"`
-	Port string `mapstrucrure:"port"`
+	Port int    `mapstrucrure:"port"`
 }
 
 type ServerConfig struct {
