@@ -12,6 +12,7 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/golang/protobuf v1.4.3
+	github.com/hashicorp/consul/api v1.1.0
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mojocn/base64Captcha v1.3.1
