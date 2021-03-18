@@ -3,10 +3,12 @@ package main
 import (
 	"cat-user-api/global"
 	"cat-user-api/initialize"
+	"cat-user-api/utils"
 	"fmt"
 	"github.com/gin-gonic/gin/binding"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	myvalidator "cat-user-api/validator"
@@ -32,6 +34,17 @@ func main() {
 	// 初始化 srv 连接
 	initialize.InitSrvConn()
 
+	port := global.ServerConfig.Port
+	viper.AutomaticEnv()
+	// 如果是本地开发环境，端口是需要固定,要不然端口一变就要更改yapi，线上环境自动获取端口号
+	debug := viper.GetBool("CAT_DEBUG")
+	if !debug {
+		tcpPort, err := utils.GetFreeTcpPort()
+		if err == nil {
+			port = tcpPort
+		}
+	}
+
 	//注册验证器
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation("mobile", myvalidator.ValidateMobile)
@@ -43,8 +56,6 @@ func main() {
 			return t
 		})
 	}
-
-	port := global.ServerConfig.Port
 
 	/**
 	1. S() 可以获取一个全局的 sugar,可以让我们自己设置一个全局的 logger
